@@ -1,7 +1,6 @@
 from elasticsearch import Elasticsearch
 from datetime import datetime
 from TwitterAPI import TwitterAPI
-import config
 import json
 import _thread
 import time
