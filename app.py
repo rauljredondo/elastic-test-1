@@ -10,8 +10,7 @@ import os
 api = TwitterAPI(os.environ['consumer_key'], os.environ['consumer_secret'], os.environ['access_token_key'], os.environ['access_token_secret'])
 
 http_auth = (os.environ['elasticUser'], os.environ['elasticSectet'])
-es = Elasticsearch([os.environ['elasticHost']],
-                   http_auth=http_auth)
+es = Elasticsearch([os.environ['elasticHost']], http_auth=http_auth)
 
 user_fields = [
     'followers_count',
