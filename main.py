@@ -5,12 +5,13 @@ import config
 import json
 import _thread
 import time
+import os
 
 
-api = TwitterAPI(config.consumer_key, config.consumer_secret, config.access_token_key, config.access_token_secret)
+api = TwitterAPI(os.environ['consumer_key'], os.environ['consumer_secret'], os.environ['access_token_key'], os.environ['access_token_secret'])
 
-http_auth = (config.elasticUser, config.elasticSectet)
-es = Elasticsearch([config.elasticHost],
+http_auth = (os.environ['elasticUser'], os.environ['elasticSectet'])
+es = Elasticsearch([os.environ['elasticHost']],
                    http_auth=http_auth)
 
 user_fields = [
