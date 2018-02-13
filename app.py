@@ -65,7 +65,7 @@ def parse_trend_tweet(location, woeid):
 def get_trendings():
 	for key, value in yahoo_woeid.items():
 		_thread.start_new_thread(parse_trend_tweet, (key, value, ))
-		time.sleep(30)
+		time.sleep(1)
 
 def main():
 	get_trendings()
