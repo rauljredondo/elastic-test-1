@@ -6,12 +6,6 @@ import _thread
 import time
 import os
 
-
-api = TwitterAPI(os.environ['consumer_key'], os.environ['consumer_secret'], os.environ['access_token_key'], os.environ['access_token_secret'])
-
-http_auth = (os.environ['elasticUser'], os.environ['elasticSectet'])
-es = Elasticsearch([os.environ['elasticHost']], http_auth=http_auth)
-
 user_fields = [
     'followers_count',
     'friends_count',
@@ -31,56 +25,50 @@ tweet_fields = [
     'text'
 ]
 
+yahoo_woeid = {
+    'Spain': 23424950,
+    'Barcelona':753692,
+    'Biscay':754542,
+    'Madrid': 766273,
+    'Seville':774508
+}
 
-def process_tweet(item, topic):
-    tweet = {'hastags': []}
-    user = {}
-    for field in user_fields:
-        if field in item['user'] and item['user'][field]:
-            user[field] = item['user'][field]
 
-    for field in tweet_fields:
-        if field in item and item[field]:
-            tweet[field] = item[field]
+api = TwitterAPI(os.environ['consumer_key'], os.environ['consumer_secret'], os.environ['access_token_key'], os.environ['access_token_secret'])
 
-    tweet['user_id'] = item['user']['id_str']
-    tweet['post_date'] = datetime.now()
-    user['post_date'] = datetime.now()
+http_auth = (os.environ['elasticUser'], os.environ['elasticSectet'])
+es = Elasticsearch([os.environ['elasticHost']], http_auth=http_auth)
 
-    for word in topic:
-        if word in item['text']:
-            tweet['topic'] = word
-            break
-
-    if 'hastags' in item['entities']:
-        for elem in item['entities']['hastags']:
-            tweet['hastags'].append(elem)
-
-    #tweet = json.dumps(tweet, ensure_ascii=False)
-    #user = json.dumps(user, ensure_ascii=False)
-    es.index(index='twitter_status', doc_type='_doc', body=tweet)
-    es.index(index='twitter_user', doc_type='_doc', body=user, id=item['user']['id_str'])
-
-def stream_topic(topic):
-    r = api.request('statuses/filter', {'track': topic})
-    time.sleep(0.5)
+def parse_trend_tweet(location, woeid):
+    r = api.request('trends/place', {'id': woeid})
+    tweet_volume_prev = 0
     for item in r.get_iterator():
-        try:
-            _thread.start_new_thread(process_tweet, (item, topic, ))
-        except:
-            print("Error: unable to start thread at tweet level")
+        tweet = dict(
+            location=location,
+            woeid=woeid,
+            post_date=datetime.now(),
+            name=item['name']
+        )
 
+        tweet['promoted_content'] = item['promoted_content'] if 'promoted_content' in item and item['promoted_content'] else None
+        if 'tweet_volume' in item and item['tweet_volume']:
+            tweet['tweet_volume'] = item['tweet_volume']
+            tweet_volume_prev = item['tweet_volume']
+        else:
+            tweet['tweet_volume'] = tweet_volume_prev * 0.9
+            tweet_volume_prev *= 0.95
+
+        print(tweet)
+        time.sleep(0.5)
+        es.index(index='mytwitter', doc_type='trend', body=tweet)
+
+def get_trendings():
+	for key, value in yahoo_woeid.items():
+        _thread.start_new_thread(parse_trend_tweet, (key, value,))
+        time.sleep(30)
 
 def main():
-    words = ['Bitcoin', 'Litecoin', 'Ethereum']
-    stream_topic(words)
-    """
-    for word in words:
-        try:
-            _thread.start_new_thread(stream_topic, (word, ))
-        except:
-            print("Error: unable to start thread at stream level")
-    """
+	get_trendings()
 
 if __name__ == "__main__":
     main()
